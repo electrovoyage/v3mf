@@ -15,3 +15,7 @@ Modes:
 
 ## Name
 "v3mf" is a combination of "VMF", which is Valve's map file format (unfortunately unsupported by v3mf due to how complex brush notation in it is), and "3MF", which is a file format often used for additive manufacturing (i.e. 3D printing).
+
+## Special thanks
+- craftablescience (tysm craftable!!!)
+- creators and contributors of SourceIO
