@@ -1,5 +1,4 @@
 /.vscode
-/cloud.ply
 /CrowbarDecompiler.exe
-/Mesh.stl
-/Mesh2.stl
+*.stl
+*.ply
