@@ -1,6 +1,29 @@
 # v3mf - Source to STL converter
 This tool can convert a compiled BSP map to an STL 3D model for printing out memento figurines of your maps! Note that it may require some post-processing as nodraw faces do not generate triangles.
 
+## Demos
+<details>
+<summary>GLaDOS Wakeup</summary>
+<a href="https://electrovoyage.github.io/v3mf-demo-embed?model=https://electrovoyage.github.io/v3mf-demo-embed/demos/sp_a1_wakeup.stl">View demo</a>
+<br>Created with the following command:<br>
+<pre><code>python v3mf.py --filetype=bsp_portal -up=+Y "&lt;steam path&gt;/steamapps/common/Portal 2/portal2/maps/sp_a1_wakeup.bsp"<br>
+</code></pre>
+</details>
+<details>
+<summary>Triple Laser</summary>
+<a href="https://electrovoyage.github.io/v3mf-demo-embed?model=https://electrovoyage.github.io/v3mf-demo-embed/demos/sp_a2_triple_laser.stl">View demo</a>
+<br>Created with the following command:<br>
+<pre><code>python v3mf.py --filetype=bsp -up=+Y --game="&lt;steam path&gt;/steamapps/common/Portal 2/portal2" "&lt;steam path&gt;/steamapps/common/Portal 2/portal2/maps/sp_a2_triple_laser.bsp"<br>
+</code></pre>
+</details>
+<details>
+<summary>Conversion Intro</summary>
+<a href="https://electrovoyage.github.io/v3mf-demo-embed?model=https://electrovoyage.github.io/v3mf-demo-embed/demos/sp_a3_portal_intro.stl">View demo</a>
+<br>Created with the following command:<br>
+<pre><code>python v3mf.py --filetype=bsp -up=+Y --game="&lt;steam path&gt;/steamapps/common/Portal 2/portal2" "&lt;steam path&gt;/steamapps/common/Portal 2/portal2/maps/sp_a3_portal_intro.bsp"<br>
+</code></pre>
+</details>
+
 ## Features
 Modes:
 - Portals - create planes at portal intersections (may be removed in the future)
