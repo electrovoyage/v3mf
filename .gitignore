@@ -2,3 +2,7 @@
 /CrowbarDecompiler.exe
 *.stl
 *.ply
+v3mf.build
+v3mf.dist
+buildaselectrovoyage.bat
+nuitka-crash-report.xml

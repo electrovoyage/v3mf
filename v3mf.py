@@ -1,26 +1,4 @@
-import re
-import os
-import math
-import tqdm
-import tempfile
 import argparse
-import srctools
-import srctools.bsp
-import srctools.mdl
-import srctools.game
-import srctools.filesys
- 
-import SourceIO.library.models.vvd as vvd
-import SourceIO.library.utils as vtxutils
-import SourceIO.library.models.mdl.v49 as mdl
-import SourceIO.library.models.vtx.v7.vtx as vtx
-
-from functools import lru_cache
-from meshlib import mrmeshpy as mm
-
-portalregex = re.compile(r'\([-0-9\.]+ [-0-9\.]+ [-0-9\.]+ \)')
-numregex = re.compile(r'[-0-9\.]+')
-vertexregex = re.compile(r'[-0-9\.]+ ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+)')
 
 parser = argparse.ArgumentParser(__file__)
 
@@ -31,13 +9,51 @@ parser.add_argument('--proptype', '-ap', help='entity classname to also render, 
 parser.add_argument('--game', '-g', type=str, help='path to folder with game\'s main gameinfo.txt. must be specified if filetype=bsp and enableprops=true.')
 parser.add_argument('--enableprops', '-ep', help='set to false to disable props in BSP mode', choices=['true', 'false'], default='true')
 parser.add_argument('--enablebrushes', '-eb', help='set to false to disable basic map geometry in BSP mode', choices=['true', 'false'], default='true')
+parser.add_argument('--upwardaxis', '-up', help='model\'s up axis. anything but +Z will preview incorrectly in most software (STL usually has +Z as up) but programs expecting other axes will work fine', choices=['+Z', '+Y', '+X'], default='+Z')
 #parser.add_argument('--crowbar', '-cr', type=str, help='path to CrowbarDecompiler.exe (https://github.com/mrglaster/Source-models-decompiler-cmd/releases/latest). required if props are enabled in BSP mode')
 
 args = parser.parse_args()
-final_mesh = mm.Mesh()
 
-import open3d as o3d
+import re
+import os
+import math
+import tqdm
+import tempfile
+import srctools
 import numpy as np
+import srctools.bsp
+import srctools.mdl
+import srctools.game
+import open3d as o3d
+import srctools.filesys
+ 
+from functools import lru_cache
+from meshlib import mrmeshpy as mm
+import SourceIO.library.models.vvd as vvd
+import SourceIO.library.utils as vtxutils
+import SourceIO.library.models.mdl.v49 as mdl
+import SourceIO.library.models.vtx.v7.vtx as vtx
+
+portalregex = re.compile(r'\([-0-9\.]+ [-0-9\.]+ [-0-9\.]+ \)')
+numregex = re.compile(r'[-0-9\.]+')
+vertexregex = re.compile(r'[-0-9\.]+ ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+) ([-0-9\.]+)')
+
+def rotateModel(model: mm.Mesh, angles: srctools.math.Angle) -> mm.Mesh:
+    '''
+    Rotate model by `angles` degrees and return result.
+    '''
+    model.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusY(), math.radians(angles.pitch))))
+    model.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusX(), math.radians(angles.roll))))
+    model.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusZ(), math.radians(angles.yaw))))
+    
+    return model
+
+rot_offsets = {
+    '+Z': (0, 0, 0),
+    '+Y': (0, 0, -90),
+    '+X': (90, 0, 0),
+}
+final_mesh = mm.Mesh()
 
 def read_smd(fp: str) -> tuple[tuple[tuple[float, float, float]], tuple[tuple[float, float, float]]]:
     with open(fp, 'r') as f:
@@ -184,9 +200,7 @@ def addProp(prop: srctools.bsp.StaticProp, fs: srctools.filesys.FileSystemChain)
         
         angles = prop.angles
         
-        m.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusY(), math.radians(angles.pitch))))
-        m.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusX(), math.radians(angles.roll))))
-        m.transform(mm.AffineXf3f.linear(mm.Matrix3f.rotation(mm.Vector3f.plusZ(), math.radians(angles.yaw))))
+        rotateModel(m, angles)
         m.transform(mm.AffineXf3f.translation(mm.Vector3f(*prop.origin)))
         final_mesh.addMesh(m)
 
@@ -243,76 +257,69 @@ def makeMeshFromSourceModel(name: str, d: str, fs: srctools.filesys.FileSystemCh
     m = mm.loadMesh(os.path.join(d, 'modelmesh.stl'))
     
     return m
-
-if __name__ == '__main__':
-    match args.filetype:
-        case "bsp":
-            bsp = srctools.bsp.BSP(args.FILE, srctools.bsp.VERSIONS.PORTAL_2)
-
-            if args.enablebrushes == 'true':
-                print("constructing base map model")
-                for entity, bmodel in bsp.bmodels.items():
-                    #print(entity['targetname'])
-                    for face in bmodel.faces:
-                        cl = mm.PointCloud()
-                        for edge in face.edges:
-                            #cl.addPoint(mm.Vector3f(*edge.a))
-                            cl.addPoint(mm.Vector3f(*edge.b))
-
-                        mesh = mm.triangulatePointCloud(cl)
-                        final_mesh.addMesh(mesh)
-                    break
-
-            if args.enableprops != 'false':
-                if getattr(args, 'game', None) is None:
-                    raise Exception('must specify --game if props are enabled')
-
-                #if getattr(args, 'crowbar', None) is None:
-                #    raise Exception('must specify --crowbar if props are enabled')
-
-                print("creating filesystem chain")
-                game = srctools.game.Game(args.game)
-                
-                fs = game.get_filesystem()
-
-                # mount BSP
-                fs.add_sys(srctools.filesys.ZipFileSystem(args.FILE, zipfile=bsp.pakfile))
-
-                print("populating static props")
-                bar = tqdm.tqdm(bsp.props, unit=' props')
-                for prop in bar:
-                    addProp(prop, fs)
-
-        case "portal":
-            with open(args.FILE, 'r') as pfile:
-                # first 3 lines are info we don't need
-                pfile.readline()
-                pfile.readline()
-                pfile.readline()
-
-                while (line := pfile.readline()):
-                    corners_s = re.findall(portalregex, line)
-                    corners = [[float(j) for j in re.findall(numregex, i)] for i in corners_s]
-
-                    points = mm.std_vector_Vector3_float()
-
-                    cl = mm.PointCloud()
-                    for corner in corners:
-                        cl.addPoint(mm.Vector3f(*corner))
-                        
-                    nefertiti_mesh = mm.triangulatePointCloud(cl)
-                    final_mesh.addMesh(nefertiti_mesh)
-                    
-        case "bsp_visleaf":
-            bsp = srctools.bsp.BSP(args.FILE, srctools.bsp.VERSIONS.PORTAL_2)
-            tree = bsp.vis_tree()
-            for leaf in tree.iter_leafs():
-                for face in leaf.faces:
+match args.filetype:
+    case "bsp":
+        bsp = srctools.bsp.BSP(args.FILE, srctools.bsp.VERSIONS.PORTAL_2)
+        if args.enablebrushes == 'true':
+            print("constructing base map model")
+            for entity, bmodel in bsp.bmodels.items():
+                #print(entity['targetname'])
+                for face in bmodel.faces:
                     cl = mm.PointCloud()
                     for edge in face.edges:
                         #cl.addPoint(mm.Vector3f(*edge.a))
                         cl.addPoint(mm.Vector3f(*edge.b))
                     mesh = mm.triangulatePointCloud(cl)
                     final_mesh.addMesh(mesh)
-
-    mm.saveMesh(final_mesh, "Mesh.stl")
+                break
+            
+        if args.enableprops != 'false':
+            if getattr(args, 'game', None) is None:
+                raise Exception('must specify --game if props are enabled')
+            #if getattr(args, 'crowbar', None) is None:
+            #    raise Exception('must specify --crowbar if props are enabled')
+            
+            print("creating filesystem chain")
+            game = srctools.game.Game(args.game)
+            
+            fs = game.get_filesystem()
+            # mount BSP
+            fs.add_sys(srctools.filesys.ZipFileSystem(args.FILE, zipfile=bsp.pakfile))
+            
+            print("populating static props")
+            bar = tqdm.tqdm(bsp.props, unit=' props')
+            for prop in bar:
+                addProp(prop, fs)
+    case "portal":
+        with open(args.FILE, 'r') as pfile:
+            # first 3 lines are info we don't need
+            pfile.readline()
+            pfile.readline()
+            pfile.readline()
+            
+            while (line := pfile.readline()):
+                corners_s = re.findall(portalregex, line)
+                corners = [[float(j) for j in re.findall(numregex, i)] for i in corners_s]
+                points = mm.std_vector_Vector3_float()
+                cl = mm.PointCloud()
+                for corner in corners:
+                    cl.addPoint(mm.Vector3f(*corner))
+                    
+                nefertiti_mesh = mm.triangulatePointCloud(cl)
+                final_mesh.addMesh(nefertiti_mesh)
+                
+    case "bsp_visleaf":
+        bsp = srctools.bsp.BSP(args.FILE, srctools.bsp.VERSIONS.PORTAL_2)
+        
+        tree = bsp.vis_tree()
+        for leaf in tree.iter_leafs():
+            for face in leaf.faces:
+                cl = mm.PointCloud()
+                for edge in face.edges:
+                    #cl.addPoint(mm.Vector3f(*edge.a))
+                    cl.addPoint(mm.Vector3f(*edge.b))
+                mesh = mm.triangulatePointCloud(cl)
+                final_mesh.addMesh(mesh)
+                
+rotateModel(final_mesh, srctools.math.Angle(*rot_offsets[args.upwardaxis]))
+mm.saveMesh(final_mesh, "Mesh.stl")
