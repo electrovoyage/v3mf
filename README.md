@@ -46,6 +46,7 @@ Modes:
 ## Building from source
 Windows: `build.bat`
 - If your user has non-ASCII characters in its path (e.g. cyrillics), create a new user with a purely-ASCII name and use `runas /user:<YOUR ALTERNATE USER'S NAME> /env build.bat`. *This is a bug in Scons, which is used by the build system.*
+ 
 Linux `sh build.sh`
 - I don't know if the non-ASCII username bug also applies for Linux, but, if it does, use `su -c 'sh build.sh' <YOUR ALTERNATE USE USER'S NAME>"` or `sudo -u <YOUR ALTERNATE USER'S NAME> 'sh build.sh'`.
 
