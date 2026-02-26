@@ -1,24 +1,9 @@
-import argparse
-
-parser = argparse.ArgumentParser(__file__)
-
-parser.add_argument('FILE')
-
-parser.add_argument('--filetype', '-ft', help='what type is FILE', choices=['bsp', 'portal', 'bsp_visleaf'])
-parser.add_argument('--proptype', '-ap', help='entity classname to also render, with optional keyvalue name, formatted as classname.keyvalue. repeatable.', action='append')
-parser.add_argument('--game', '-g', type=str, help='path to folder with game\'s main gameinfo.txt. must be specified if filetype=bsp and enableprops=true.')
-parser.add_argument('--enableprops', '-ep', help='set to false to disable props in BSP mode', choices=['true', 'false'], default='true')
-parser.add_argument('--enablebrushes', '-eb', help='set to false to disable basic map geometry in BSP mode', choices=['true', 'false'], default='true')
-parser.add_argument('--upwardaxis', '-up', help='model\'s up axis. anything but +Z will preview incorrectly in most software (STL usually has +Z as up) but programs expecting other axes will work fine', choices=['+Z', '+Y', '+X'], default='+Z')
-#parser.add_argument('--crowbar', '-cr', type=str, help='path to CrowbarDecompiler.exe (https://github.com/mrglaster/Source-models-decompiler-cmd/releases/latest). required if props are enabled in BSP mode')
-
-args = parser.parse_args()
-
 import re
 import os
 import math
 import tqdm
 import tempfile
+import argparse
 import srctools
 import numpy as np
 import srctools.bsp
@@ -33,6 +18,20 @@ import SourceIO.library.models.vvd as vvd
 import SourceIO.library.utils as vtxutils
 import SourceIO.library.models.mdl.v49 as mdl
 import SourceIO.library.models.vtx.v7.vtx as vtx
+
+parser = argparse.ArgumentParser(__file__)
+
+parser.add_argument('FILE')
+
+parser.add_argument('--filetype', '-ft', help='what type is FILE', choices=['bsp', 'portal', 'bsp_visleaf'])
+parser.add_argument('--proptype', '-ap', help='entity classname to also render, with optional keyvalue name, formatted as classname.keyvalue. repeatable.', action='append')
+parser.add_argument('--game', '-g', type=str, help='path to folder with game\'s main gameinfo.txt. must be specified if filetype=bsp and enableprops=true.')
+parser.add_argument('--enableprops', '-ep', help='set to false to disable props in BSP mode', choices=['true', 'false'], default='true')
+parser.add_argument('--enablebrushes', '-eb', help='set to false to disable basic map geometry in BSP mode', choices=['true', 'false'], default='true')
+parser.add_argument('--upwardaxis', '-up', help='model\'s up axis. anything but +Z will preview incorrectly in most software (STL usually has +Z as up) but programs expecting other axes will work fine', choices=['+Z', '+Y', '+X'], default='+Z')
+#parser.add_argument('--crowbar', '-cr', type=str, help='path to CrowbarDecompiler.exe (https://github.com/mrglaster/Source-models-decompiler-cmd/releases/latest). required if props are enabled in BSP mode')
+
+args = parser.parse_args()
 
 portalregex = re.compile(r'\([-0-9\.]+ [-0-9\.]+ [-0-9\.]+ \)')
 numregex = re.compile(r'[-0-9\.]+')

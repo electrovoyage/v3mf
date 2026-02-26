@@ -4,5 +4,9 @@
 *.ply
 v3mf.build
 v3mf.dist
+v3mf.onefile-build
 buildaselectrovoyage.bat
 nuitka-crash-report.xml
+*.spec
+*.exe
+dist
