@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(__file__)
 
 parser.add_argument('FILE')
 
-parser.add_argument('--filetype', '-ft', help='what type is FILE', choices=['bsp', 'portal', 'bsp_visleaf'])
+parser.add_argument('--filetype', '-ft', help='what type is FILE', choices=['bsp', 'portal', 'bsp_visleaf'], required=True)
 parser.add_argument('--proptype', '-ap', help='entity classname to also render, with optional keyvalue name, formatted as classname.keyvalue. repeatable.', action='append')
 parser.add_argument('--game', '-g', type=str, help='path to folder with game\'s main gameinfo.txt. must be specified if filetype=bsp and enableprops=true.')
 parser.add_argument('--enableprops', '-ep', help='set to false to disable props in BSP mode', choices=['true', 'false'], default='true')
@@ -256,10 +256,11 @@ def makeMeshFromSourceModel(name: str, d: str, fs: srctools.filesys.FileSystemCh
     m = mm.loadMesh(os.path.join(d, 'modelmesh.stl'))
     
     return m
+    
 match args.filetype:
     case "bsp":
         bsp = srctools.bsp.BSP(args.FILE, srctools.bsp.VERSIONS.PORTAL_2)
-        if args.enablebrushes == 'true':
+        if args.enablebrushes != 'false':
             print("constructing base map model")
             for entity, bmodel in bsp.bmodels.items():
                 #print(entity['targetname'])
